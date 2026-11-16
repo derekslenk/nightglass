@@ -76,12 +76,7 @@ func (d *dataFolder) saveSettings(s settings) error {
 }
 
 // localFileName is "YYYY-MM-DD.ext", using the image's own extension.
-func (e Entry) localFileName() string {
-	if e.isImage() {
-		return e.Date + e.ext()
-	}
-	return e.Date + ".jpg"
-}
+func (e Entry) localFileName() string { return e.Date + e.ext() }
 
 // pictures makes sure each entry's picture is on disk, fetching the missing
 // ones, and returns their paths in the entries' order.

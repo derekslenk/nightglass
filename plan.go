@@ -16,7 +16,6 @@ import (
 type Entry struct {
 	Date  string // YYYY-MM-DD
 	Title string
-	Page  string // article URL on science.nasa.gov
 	Image string // full-resolution image URL
 }
 
@@ -57,7 +56,7 @@ func parseFeed(r io.Reader) ([]Entry, error) {
 		if date == "" || it.HDURL == "" {
 			continue
 		}
-		out = append(out, Entry{Date: date, Title: strings.TrimSpace(it.Title), Page: it.Link, Image: fullResURL(it.HDURL)})
+		out = append(out, Entry{Date: date, Title: strings.TrimSpace(it.Title), Image: fullResURL(it.HDURL)})
 	}
 	return out, nil
 }
