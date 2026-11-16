@@ -79,3 +79,14 @@ func TestWriteAtomicFailureLeavesNothing(t *testing.T) {
 		}
 	}
 }
+
+func TestWriteAtomicRenameFailureLeavesNoPart(t *testing.T) {
+	p := t.TempDir() // a directory in the way makes the final rename fail
+	err := writeAtomic(p, func(w io.Writer) error { _, err := w.Write([]byte("x")); return err })
+	if err == nil {
+		t.Fatal("expected rename onto a directory to fail")
+	}
+	if _, err := os.Stat(p + ".part"); err == nil {
+		t.Error(".part left behind after a failed rename")
+	}
+}
