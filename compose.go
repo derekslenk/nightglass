@@ -108,12 +108,20 @@ func edgeProfile(img *image.RGBA, r image.Rectangle, vertical, far bool, blurDiv
 	// Median along the edge first (kills short runs like stars or a meteor
 	// trail crossing the edge), then three box blurs (~Gaussian with sigma
 	// ~edge/blurDiv): soft (/12) turns a horizon into a gentle blend, crisp
-	// (/60) keeps it as a sharper band.
+	// (/60) keeps it as a sharper band. The blur runs in log space so dark
+	// rows win the average: the blend ramps into the bright side of a horizon
+	// and the black sky above it stays black.
 	win := max(n/100, 2)
 	for c := range ch {
 		ch[c] = medianFilter(ch[c], win)
+		for i, v := range ch[c] {
+			ch[c][i] = 1 / (v + 1)
+		}
 		for k := 0; k < 3; k++ {
 			ch[c] = boxBlur(ch[c], max(n/blurDiv, 1))
+		}
+		for i, v := range ch[c] {
+			ch[c][i] = 1/v - 1
 		}
 	}
 	out := make([]color.RGBA, n)

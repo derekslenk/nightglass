@@ -111,8 +111,8 @@ func TestComposeTopBottomBarsFollowEdge(t *testing.T) {
 }
 
 func TestComposeBarsBlendHardHorizon(t *testing.T) {
-	// Top half dark sky, bottom half bright snow: a hard horizon at mid-height.
-	sky, snow := color.RGBA{20, 25, 80, 255}, color.RGBA{230, 230, 240, 255}
+	// Top half black sky, bottom half bright snow: a hard horizon at mid-height.
+	sky, snow := color.RGBA{5, 5, 10, 255}, color.RGBA{230, 230, 240, 255}
 	src := image.NewRGBA(image.Rect(0, 0, 400, 300))
 	for y := 0; y < 300; y++ {
 		for x := 0; x < 400; x++ {
@@ -131,13 +131,16 @@ func TestComposeBarsBlendHardHorizon(t *testing.T) {
 	if c := out.RGBAAt(5, 590); !near(c, snow, 20) {
 		t.Errorf("bottom of bar %v, want ~snow", c)
 	}
-	// ...but 8% of the height away from the horizon it is already clearly
-	// blending, rather than holding a crisp band.
-	for _, y := range []int{252, 348} {
-		c := out.RGBAAt(5, y)
-		if near(c, sky, 30) || near(c, snow, 30) {
-			t.Errorf("row %d = %v: still a hard band, not a gentle blend", y, c)
+	// ...the blend never brightens the sky above the horizon...
+	for y := 0; y < 300; y++ {
+		if c := out.RGBAAt(5, y); !near(c, sky, 20) {
+			t.Fatalf("row %d = %v: snow leaked into the sky above the horizon", y, c)
 		}
+	}
+	// ...and 8% of the height below it the bar is still clearly blending,
+	// rather than holding a crisp band.
+	if c := out.RGBAAt(5, 348); near(c, sky, 30) || near(c, snow, 30) {
+		t.Errorf("row 348 = %v: still a hard band, not a gentle blend", c)
 	}
 }
 
