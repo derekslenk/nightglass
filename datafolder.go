@@ -144,7 +144,9 @@ func (d *dataFolder) prune(inUse []string) {
 
 // renders builds a centered, bar-matched wallpaper for each monitor at its
 // exact resolution from the picture assigned to it, in rendered\. Renders are
-// cached by picture+size+style; stale ones are removed.
+// cached by picture+size+style; stale ones are removed. A picture that cannot
+// be rendered is logged, deleted so it is fetched again next time, and its
+// monitor is left out of the result (unchanged on screen).
 func (d *dataFolder) renders(assigned map[string]string, mons []Monitor, style BarStyle) (map[string]string, error) {
 	rdir := filepath.Join(d.dir, "rendered")
 	if err := os.MkdirAll(rdir, 0o755); err != nil {
@@ -162,7 +164,9 @@ func (d *dataFolder) renders(assigned map[string]string, mons []Monitor, style B
 			continue
 		}
 		if err := renderFile(srcPath, dst, m.Width, m.Height, style); err != nil {
-			return nil, fmt.Errorf("render %s for %dx%d: %w", filepath.Base(srcPath), m.Width, m.Height, err)
+			log.Printf("render %s for %dx%d: %v (monitor left as is)", filepath.Base(srcPath), m.Width, m.Height, err)
+			delete(out, m.ID)
+			continue
 		}
 	}
 	if ents, err := os.ReadDir(rdir); err == nil {
@@ -183,6 +187,7 @@ func renderFile(src, dst string, w, h int, style BarStyle) error {
 	img, _, err := image.Decode(f)
 	f.Close()
 	if err != nil {
+		os.Remove(src) // a bad download must not poison every later refresh
 		return err
 	}
 	// PNG so the bars stay a perfectly flat color (no JPEG blocking).
