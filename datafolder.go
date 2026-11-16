@@ -95,7 +95,8 @@ func (d *dataFolder) pictures(ctx context.Context, entries []Entry, fetch func(c
 	return paths, nil
 }
 
-var datedFile = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}\.[a-z]+$`)
+// A prefix match, so a ".part" left by an interrupted download ages out too.
+var datedFile = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}\.`)
 
 // filesToDelete returns downloaded images beyond the newest `keep`,
 // never including any file in inUse.
