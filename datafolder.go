@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	_ "image/jpeg"
@@ -161,6 +162,9 @@ func (d *dataFolder) renders(assigned map[string]string, mons []Monitor, style B
 			continue
 		}
 		if err := renderFile(srcPath, dst, m.Width, m.Height, style); err != nil {
+			if !errors.Is(err, errBadPicture) {
+				return nil, fmt.Errorf("render %s for %dx%d: %w", filepath.Base(srcPath), m.Width, m.Height, err)
+			}
 			log.Printf("render %s for %dx%d: %v (monitor left as is)", filepath.Base(srcPath), m.Width, m.Height, err)
 			delete(out, m.ID)
 			failed = true
@@ -178,16 +182,21 @@ func (d *dataFolder) renders(assigned map[string]string, mons []Monitor, style B
 	return out, nil
 }
 
+// errBadPicture marks a source that cannot be read or decoded, so the caller
+// gives up on it and it is downloaded again next time. Any other error is a
+// write failure, which keeps the normal retry.
+var errBadPicture = errors.New("bad picture")
+
 func renderFile(src, dst string, w, h int, style BarStyle) error {
 	f, err := os.Open(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %v", errBadPicture, err)
 	}
 	img, _, err := image.Decode(f)
 	f.Close()
 	if err != nil {
 		os.Remove(src) // a bad download must not poison every later refresh
-		return err
+		return fmt.Errorf("%w: %v", errBadPicture, err)
 	}
 	// PNG so the bars stay a perfectly flat color (no JPEG blocking).
 	enc := png.Encoder{CompressionLevel: png.BestSpeed}
