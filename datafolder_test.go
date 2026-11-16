@@ -63,6 +63,26 @@ func TestSettingsRoundTrip(t *testing.T) {
 	}
 }
 
+func TestRendersKeepsOldFilesWhenOneFails(t *testing.T) {
+	d := &dataFolder{dir: t.TempDir()}
+	rdir := filepath.Join(d.dir, "rendered")
+	os.MkdirAll(rdir, 0o755)
+	old := filepath.Join(rdir, "2026-11-07_32x32_v5_soft.png") // what the monitor shows now
+	os.WriteFile(old, []byte("x"), 0o644)
+	bad := filepath.Join(d.dir, "2026-11-08.png")
+	os.WriteFile(bad, []byte("junk"), 0o644)
+	out, err := d.renders(map[string]string{"side": bad}, []Monitor{{ID: "side", Width: 32, Height: 32}}, BarsSoft)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p, ok := out["side"]; ok {
+		t.Errorf("failed monitor still in result: %s", p)
+	}
+	if _, err := os.Stat(old); err != nil {
+		t.Error("old render of the skipped monitor was deleted")
+	}
+}
+
 func TestWriteAtomicFailureLeavesNothing(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "out.bin")
 	boom := errors.New("boom")

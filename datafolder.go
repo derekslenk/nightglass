@@ -150,6 +150,7 @@ func (d *dataFolder) renders(assigned map[string]string, mons []Monitor, style B
 	}
 	out := map[string]string{}
 	keep := map[string]bool{}
+	failed := false
 	for _, m := range mons {
 		srcPath := assigned[m.ID]
 		base := strings.TrimSuffix(filepath.Base(srcPath), filepath.Ext(srcPath))
@@ -162,10 +163,12 @@ func (d *dataFolder) renders(assigned map[string]string, mons []Monitor, style B
 		if err := renderFile(srcPath, dst, m.Width, m.Height, style); err != nil {
 			log.Printf("render %s for %dx%d: %v (monitor left as is)", filepath.Base(srcPath), m.Width, m.Height, err)
 			delete(out, m.ID)
+			failed = true
 			continue
 		}
 	}
-	if ents, err := os.ReadDir(rdir); err == nil {
+	// A skipped monitor still shows its old render, so no sweep until all succeed.
+	if ents, err := os.ReadDir(rdir); err == nil && !failed {
 		for _, e := range ents {
 			if !keep[e.Name()] {
 				os.Remove(filepath.Join(rdir, e.Name()))
