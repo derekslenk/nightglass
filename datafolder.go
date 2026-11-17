@@ -188,12 +188,12 @@ func (d *dataFolder) renders(assigned map[string]string, mons []Monitor, style B
 var errBadPicture = errors.New("bad picture")
 
 func renderFile(src, dst string, w, h int, style BarStyle) error {
+	var img image.Image
 	f, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("%w: %v", errBadPicture, err)
+	if err == nil {
+		img, _, err = image.Decode(f)
+		f.Close()
 	}
-	img, _, err := image.Decode(f)
-	f.Close()
 	if err != nil {
 		os.Remove(src) // a bad download must not poison every later refresh
 		return fmt.Errorf("%w: %v", errBadPicture, err)
