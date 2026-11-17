@@ -159,6 +159,24 @@ func TestRefreshStyleChangeReplacesRender(t *testing.T) {
 	}
 }
 
+func TestRefreshBadPictureSkipsItsMonitor(t *testing.T) {
+	r, d, _ := newTestRefresher(t)
+	bad := filepath.Join(r.folder.dir, "2026-11-07.png")
+	os.WriteFile(bad, []byte("<html>not a picture</html>"), 0o644)
+	if _, err := r.refresh(context.Background(), BarsSoft); err != nil {
+		t.Fatalf("one bad picture failed the whole refresh: %v", err)
+	}
+	if !strings.HasPrefix(filepath.Base(d.applied["main"]), "2026-11-08_64x32") {
+		t.Errorf("main monitor got %q, want the good picture", d.applied["main"])
+	}
+	if p, ok := d.applied["side"]; ok {
+		t.Errorf("side monitor was set to %q, want left as is", p)
+	}
+	if _, err := os.Stat(bad); err == nil {
+		t.Error("bad picture kept; it would never be re-downloaded")
+	}
+}
+
 func TestRefreshFeedErrorTouchesNothing(t *testing.T) {
 	r, d, tf := newTestRefresher(t)
 	tf.failFeed.Store(true)

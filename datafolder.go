@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	_ "image/jpeg"
@@ -76,12 +77,7 @@ func (d *dataFolder) saveSettings(s settings) error {
 }
 
 // localFileName is "YYYY-MM-DD.ext", using the image's own extension.
-func (e Entry) localFileName() string {
-	if e.isImage() {
-		return e.Date + e.ext()
-	}
-	return e.Date + ".jpg"
-}
+func (e Entry) localFileName() string { return e.Date + e.ext() }
 
 // pictures makes sure each entry's picture is on disk, fetching the missing
 // ones, and returns their paths in the entries' order.
@@ -100,7 +96,8 @@ func (d *dataFolder) pictures(ctx context.Context, entries []Entry, fetch func(c
 	return paths, nil
 }
 
-var datedFile = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}\.[a-z]+$`)
+// A prefix match, so a ".part" left by an interrupted download ages out too.
+var datedFile = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}\.`)
 
 // filesToDelete returns downloaded images beyond the newest `keep`,
 // never including any file in inUse.
@@ -144,7 +141,9 @@ func (d *dataFolder) prune(inUse []string) {
 
 // renders builds a centered, bar-matched wallpaper for each monitor at its
 // exact resolution from the picture assigned to it, in rendered\. Renders are
-// cached by picture+size+style; stale ones are removed.
+// cached by picture+size+style; stale ones are removed. A picture that cannot
+// be rendered is logged, deleted so it is fetched again next time, and its
+// monitor is left out of the result (unchanged on screen).
 func (d *dataFolder) renders(assigned map[string]string, mons []Monitor, style BarStyle) (map[string]string, error) {
 	rdir := filepath.Join(d.dir, "rendered")
 	if err := os.MkdirAll(rdir, 0o755); err != nil {
@@ -152,6 +151,7 @@ func (d *dataFolder) renders(assigned map[string]string, mons []Monitor, style B
 	}
 	out := map[string]string{}
 	keep := map[string]bool{}
+	failed := false
 	for _, m := range mons {
 		srcPath := assigned[m.ID]
 		base := strings.TrimSuffix(filepath.Base(srcPath), filepath.Ext(srcPath))
@@ -162,10 +162,17 @@ func (d *dataFolder) renders(assigned map[string]string, mons []Monitor, style B
 			continue
 		}
 		if err := renderFile(srcPath, dst, m.Width, m.Height, style); err != nil {
-			return nil, fmt.Errorf("render %s for %dx%d: %w", filepath.Base(srcPath), m.Width, m.Height, err)
+			if !errors.Is(err, errBadPicture) {
+				return nil, fmt.Errorf("render %s for %dx%d: %w", filepath.Base(srcPath), m.Width, m.Height, err)
+			}
+			log.Printf("render %s for %dx%d: %v (monitor left as is)", filepath.Base(srcPath), m.Width, m.Height, err)
+			delete(out, m.ID)
+			failed = true
+			continue
 		}
 	}
-	if ents, err := os.ReadDir(rdir); err == nil {
+	// A skipped monitor still shows its old render, so no sweep until all succeed.
+	if ents, err := os.ReadDir(rdir); err == nil && !failed {
 		for _, e := range ents {
 			if !keep[e.Name()] {
 				os.Remove(filepath.Join(rdir, e.Name()))
@@ -175,15 +182,21 @@ func (d *dataFolder) renders(assigned map[string]string, mons []Monitor, style B
 	return out, nil
 }
 
+// errBadPicture marks a source that cannot be read or decoded, so the caller
+// gives up on it and it is downloaded again next time. Any other error is a
+// write failure, which keeps the normal retry.
+var errBadPicture = errors.New("bad picture")
+
 func renderFile(src, dst string, w, h int, style BarStyle) error {
+	var img image.Image
 	f, err := os.Open(src)
-	if err != nil {
-		return err
+	if err == nil {
+		img, _, err = image.Decode(f)
+		f.Close()
 	}
-	img, _, err := image.Decode(f)
-	f.Close()
 	if err != nil {
-		return err
+		os.Remove(src) // a bad download must not poison every later refresh
+		return fmt.Errorf("%w: %v", errBadPicture, err)
 	}
 	// PNG so the bars stay a perfectly flat color (no JPEG blocking).
 	enc := png.Encoder{CompressionLevel: png.BestSpeed}

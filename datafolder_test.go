@@ -2,6 +2,8 @@ package main
 
 import (
 	"errors"
+	"image"
+	"image/png"
 	"io"
 	"os"
 	"path/filepath"
@@ -60,6 +62,43 @@ func TestSettingsRoundTrip(t *testing.T) {
 	}
 	if got := d.loadSettings(); got.BarStyle != BarsCrisp {
 		t.Fatalf("reloaded style = %q, want crisp", got.BarStyle)
+	}
+}
+
+func TestRendersKeepsOldFilesWhenOneFails(t *testing.T) {
+	d := &dataFolder{dir: t.TempDir()}
+	rdir := filepath.Join(d.dir, "rendered")
+	os.MkdirAll(rdir, 0o755)
+	old := filepath.Join(rdir, "2026-11-07_32x32_v5_soft.png") // what the monitor shows now
+	os.WriteFile(old, []byte("x"), 0o644)
+	bad := filepath.Join(d.dir, "2026-11-08.png")
+	os.WriteFile(bad, []byte("junk"), 0o644)
+	out, err := d.renders(map[string]string{"side": bad}, []Monitor{{ID: "side", Width: 32, Height: 32}}, BarsSoft)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p, ok := out["side"]; ok {
+		t.Errorf("failed monitor still in result: %s", p)
+	}
+	if _, err := os.Stat(old); err != nil {
+		t.Error("old render of the skipped monitor was deleted")
+	}
+}
+
+func TestRendersWriteFailureIsAnError(t *testing.T) {
+	d := &dataFolder{dir: t.TempDir()}
+	good := filepath.Join(d.dir, "2026-11-08.png")
+	f, _ := os.Create(good)
+	png.Encode(f, image.NewRGBA(image.Rect(0, 0, 8, 8)))
+	f.Close()
+	// A directory in the way of the temp file makes the render write fail.
+	os.MkdirAll(filepath.Join(d.dir, "rendered", "2026-11-08_32x32_v5_soft.png.part"), 0o755)
+	_, err := d.renders(map[string]string{"m": good}, []Monitor{{ID: "m", Width: 32, Height: 32}}, BarsSoft)
+	if err == nil {
+		t.Fatal("a failed render write was reported as success")
+	}
+	if _, err := os.Stat(good); err != nil {
+		t.Error("good picture was deleted after a write failure")
 	}
 }
 

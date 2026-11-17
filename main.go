@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -31,7 +30,6 @@ type app struct {
 	r       *refresher
 	client  *http.Client
 	trigger chan struct{}
-	mu      sync.Mutex   // serializes refreshes
 	style   atomic.Value // BarStyle; set from the tray menu, read by refresh
 	update  atomic.Value // string: page of a newer release, once one is found
 }
@@ -203,8 +201,6 @@ func (a *app) loop() {
 
 // refresh runs one Refresh and reflects it in the tray.
 func (a *app) refresh() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 

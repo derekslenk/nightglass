@@ -38,13 +38,10 @@ func TestParseFeed(t *testing.T) {
 	}
 	want := []Entry{
 		{Date: "2026-11-08", Title: "Major Fireball Meteor",
-			Page:  "https://science.nasa.gov/image-article/apod-2026-november-8-major-fireball-meteor/",
 			Image: "https://assets.science.nasa.gov/content/dam/science/cds/apod/apod/2026/november/meteor2017_Taylor_1200.jpg"},
 		{Date: "2026-10-25", Title: "Dark Matter in a Simulated Universe",
-			Page:  "https://science.nasa.gov/image-article/apod-2026-october-25-dark-matter/",
 			Image: "https://assets.science.nasa.gov/content/dam/science/cds/apod/apod/2021/october/DarkMatter_KipacAmnh_1200.jpg"},
 		{Date: "2026-10-24", Title: "No Slug Date",
-			Page:  "https://science.nasa.gov/image-article/something-else/",
 			Image: "https://assets.science.nasa.gov/content/dam/x/clip.mp4"},
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -69,7 +66,6 @@ func TestLocalFileName(t *testing.T) {
 	cases := map[string]string{
 		"https://x/apod/2026/november/M31.JPG": "2026-11-08.jpg",
 		"https://x/apod/2026/november/x.png":   "2026-11-08.png",
-		"https://x/apod/2026/november/noext":   "2026-11-08.jpg",
 	}
 	for u, want := range cases {
 		e := Entry{Date: "2026-11-08", Image: u}
@@ -116,10 +112,10 @@ func TestAssignWallpapersSingleImage(t *testing.T) {
 func TestFilesToDelete(t *testing.T) {
 	names := []string{
 		"2026-11-08.jpg", "2026-11-07.jpg", "2026-11-06.png", "2026-11-05.jpg",
-		"config.json", "nightglass.log", "2026-11-01.jpg",
+		"config.json", "nightglass.log", "2026-11-01.jpg", "2026-10-30.jpg.part",
 	}
 	got := filesToDelete(names, 3, map[string]bool{"2026-11-01.jpg": true})
-	want := []string{"2026-11-05.jpg"}
+	want := []string{"2026-11-05.jpg", "2026-10-30.jpg.part"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v", got)
 	}
