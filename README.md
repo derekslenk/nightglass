@@ -98,10 +98,8 @@ The rendering, feed parsing, monitor assignment and cleanup logic are plain Go w
 The logo is drawn in code (`icon.go`), which also produces the tray icon. The exe's own icon comes from the committed `rsrc_windows_*.syso` files, which `go build` picks up automatically. If you change the logo, update `docs/logo.svg` and `docs/logo-256.png` to match, then regenerate the `.syso` files:
 
 ```sh
-go run github.com/tc-hib/go-winres@v0.3.3 simply --icon docs/logo-256.png --arch amd64,arm64 --manifest gui
+go run github.com/tc-hib/go-winres@v0.3.3 simply --icon docs/logo-256.png --arch amd64,arm64
 ```
-
-`--manifest gui` declares per-monitor DPI awareness, so `GetMonitorRECT` reports real pixel sizes on monitors with different scaling.
 
 Commit messages use the [Angular format](https://github.com/angular/angular/blob/main/contributing-docs/commit-message-guidelines.md). They drive releases: every push to `main` with a `fix:` commit publishes a patch release, `feat:` a minor release, and a `BREAKING CHANGE:` footer a major one. Pushes containing only `docs:`, `chore:`, `ci:`, `refactor:` or `test:` commits don't release anything.
 
