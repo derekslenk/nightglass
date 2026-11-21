@@ -188,6 +188,30 @@ func TestComposeTrimsBakedInBlackFrame(t *testing.T) {
 	}
 }
 
+func TestTrimFrameLeavesNoisyDarkContentAlone(t *testing.T) {
+	// Dark sky with sensor noise (values 0..7) is content, not padding, even
+	// though every pixel is "near black". Neither a dark top half nor a fully
+	// dark picture may be trimmed.
+	noisy := func(w, h, darkRows int) *image.RGBA {
+		img := image.NewRGBA(image.Rect(0, 0, w, h))
+		for y := 0; y < h; y++ {
+			for x := 0; x < w; x++ {
+				v := uint8((x*7 + y*3) % 8)
+				if y >= darkRows {
+					v = 200
+				}
+				img.SetRGBA(x, y, color.RGBA{v, v, v, 255})
+			}
+		}
+		return img
+	}
+	for _, src := range []*image.RGBA{noisy(40, 30, 15), noisy(40, 30, 30)} {
+		if got := trimFrame(src).Bounds(); got != src.Bounds() {
+			t.Errorf("noisy dark content trimmed to %v", got)
+		}
+	}
+}
+
 func TestParseBarStyle(t *testing.T) {
 	for in, want := range map[string]BarStyle{"soft": BarsSoft, "crisp": BarsCrisp, "": BarsSoft, "bogus": BarsSoft} {
 		if got := parseBarStyle(in); got != want {

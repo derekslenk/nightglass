@@ -73,16 +73,23 @@ func compose(src image.Image, monW, monH int, style BarStyle) *image.RGBA {
 
 // trimFrame crops the uniform near-black frame some APOD pictures carry (a
 // pillarboxed portrait, say), so the bars follow the real edge of the picture
-// instead of copying its black border.
+// instead of copying its black border. A frame line must match the corner
+// pixel to within 2 levels: a padded border decodes pixel-flat, while real
+// dark sky carries noise, so dark content is left alone.
 func trimFrame(src image.Image) image.Image {
 	sub, ok := src.(interface{ SubImage(image.Rectangle) image.Image })
 	if !ok {
 		return src
 	}
 	b := src.Bounds()
+	cr, cg, cb, _ := src.At(b.Min.X, b.Min.Y).RGBA()
+	if cr > 7<<8 || cg > 7<<8 || cb > 7<<8 {
+		return src
+	}
+	close := func(a, b uint32) bool { return max(a, b)-min(a, b) <= 2<<8 }
 	dark := func(x, y int) bool {
 		r, g, bl, _ := src.At(x, y).RGBA()
-		return r < 8<<8 && g < 8<<8 && bl < 8<<8
+		return close(r, cr) && close(g, cg) && close(bl, cb)
 	}
 	darkCol := func(x int) bool {
 		for y := b.Min.Y; y < b.Max.Y; y++ {
