@@ -2,7 +2,7 @@
 
 # Nightglass
 
-Nightglass is a small Windows tray app that sets NASA's [Astronomy Picture of the Day](https://science.nasa.gov/apod/) (APOD) as your desktop wallpaper, every day, on every monitor. It was formerly called **APOD Wallpaper**.
+Nightglass is a small Windows tray app that sets NASA's [Astronomy Picture of the Day](https://science.nasa.gov/apod/) (APOD) as your desktop wallpaper, every day, on every monitor.
 
 - **The monitor with the most pixels** gets the latest picture; **every other monitor** gets the one before it.
 - **Full resolution:** downloads NASA's original image, not the resized preview.
@@ -35,8 +35,6 @@ Put it in `%LOCALAPPDATA%\Programs\Nightglass\` (paste that into File Explorer's
 The exe isn't code-signed, so the first time, Windows SmartScreen may warn about an unknown publisher: choose **More info → Run anyway**.
 
 **To update:** when the tray menu shows **Update available**, download the new exe, right-click the tray icon → **Quit**, replace the exe in that folder (keep the same file name), and run it again.
-
-**Coming from APOD Wallpaper?** Quit it, put `nightglass-amd64.exe` in the folder above, and run it. On first run it takes over the old startup entry and moves your settings and downloaded pictures from `%LOCALAPPDATA%\APOD\`. Then delete the old `apod-wallpaper.exe`. The old app's update check doesn't recognize the renamed project, so it won't announce this release.
 
 ## Requirements
 
