@@ -2,7 +2,7 @@
 
 # Nightglass
 
-Nightglass is a small Windows tray app that sets NASA's [Astronomy Picture of the Day](https://science.nasa.gov/apod/) (APOD) as your desktop wallpaper, every day, on every monitor. It was formerly called **APOD Wallpaper**.
+Nightglass is a small Windows tray app that sets NASA's [Astronomy Picture of the Day](https://science.nasa.gov/apod/) (APOD) as your desktop wallpaper, every day, on every monitor.
 
 - **The monitor with the most pixels** gets the latest picture; **every other monitor** gets the one before it.
 - **Full resolution:** downloads NASA's original image, not the resized preview.
@@ -35,8 +35,6 @@ Put it in `%LOCALAPPDATA%\Programs\Nightglass\` (paste that into File Explorer's
 The exe isn't code-signed, so the first time, Windows SmartScreen may warn about an unknown publisher: choose **More info → Run anyway**.
 
 **To update:** when the tray menu shows **Update available**, download the new exe, right-click the tray icon → **Quit**, replace the exe in that folder (keep the same file name), and run it again.
-
-**Coming from APOD Wallpaper?** Quit it, put `nightglass-amd64.exe` in the folder above, and run it. On first run it takes over the old startup entry and moves your settings and downloaded pictures from `%LOCALAPPDATA%\APOD\`. Then delete the old `apod-wallpaper.exe`. The old app's update check doesn't recognize the renamed project, so it won't announce this release.
 
 ## Requirements
 
@@ -72,7 +70,7 @@ Everything lives in `%LOCALAPPDATA%\Nightglass\`:
 1. **Fetch:** reads the official APOD RSS feed at `science.nasa.gov/feed/apod-basic/`. The older `api.nasa.gov` APOD API broke when APOD moved to science.nasa.gov in 2026 (it returns the NASA logo for every day), so it isn't used.
 2. **Full resolution:** the feed's image links point to a preview capped at about 1280 px. The app rewrites `/dynamicimage/assets/…?w=…` to `/content/dam/…` to get the original.
 3. **Monitors:** uses the Windows `IDesktopWallpaper` API to set a different wallpaper per monitor. "Largest" means the most pixels, so a short, wide strip display isn't mistaken for the main screen.
-4. **Render:** each picture is scaled to fit and centered. For every row along the left and right edges, the app takes the median color of a thin strip (so stars don't count), smooths those colors along the edge, and paints the bars row by row. Panoramas wider than the screen get top and bottom bars instead.
+4. **Render:** a pure-black frame baked into the picture (some are pillarboxed) is trimmed off, then the picture is scaled to fit and centered. For every row along the left and right edges, the app takes the median color of a thin strip (so stars don't count), smooths those colors along the edge, and paints the bars row by row. Panoramas wider than the screen get top and bottom bars instead.
 
 ## Troubleshooting
 

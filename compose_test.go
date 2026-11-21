@@ -166,6 +166,52 @@ func TestComposeCrispStyleKeepsHorizonSharp(t *testing.T) {
 	}
 }
 
+func TestComposeTrimsBakedInBlackFrame(t *testing.T) {
+	// A 400x300 picture that is really a 300x300 red square with 50px black
+	// pillarbox bars baked in. Without trimming, the bars copy that black.
+	red := color.RGBA{200, 40, 40, 255}
+	src := image.NewRGBA(image.Rect(0, 0, 400, 300))
+	for y := 0; y < 300; y++ {
+		for x := 50; x < 350; x++ {
+			src.SetRGBA(x, y, red)
+		}
+	}
+	out := compose(src, 1600, 600, BarsSoft)
+	for _, x := range []int{5, 1595} {
+		if c := out.RGBAAt(x, 300); !near(c, red, 12) {
+			t.Errorf("bar at x=%d is %v, want ~red: black frame was not trimmed", x, c)
+		}
+	}
+	// The real picture fills the height and is centered: 600x600 at x=500.
+	if c := out.RGBAAt(500, 300); !near(c, red, 12) {
+		t.Errorf("picture edge at x=500 is %v, want ~red", c)
+	}
+}
+
+func TestTrimFrameLeavesNoisyDarkContentAlone(t *testing.T) {
+	// Dark sky with sensor noise (values 0..7) is content, not padding, even
+	// though every pixel is "near black". Neither a dark top half nor a fully
+	// dark picture may be trimmed.
+	noisy := func(w, h, darkRows int) *image.RGBA {
+		img := image.NewRGBA(image.Rect(0, 0, w, h))
+		for y := 0; y < h; y++ {
+			for x := 0; x < w; x++ {
+				v := uint8((x*7 + y*3) % 8)
+				if y >= darkRows {
+					v = 200
+				}
+				img.SetRGBA(x, y, color.RGBA{v, v, v, 255})
+			}
+		}
+		return img
+	}
+	for _, src := range []*image.RGBA{noisy(40, 30, 15), noisy(40, 30, 30)} {
+		if got := trimFrame(src).Bounds(); got != src.Bounds() {
+			t.Errorf("noisy dark content trimmed to %v", got)
+		}
+	}
+}
+
 func TestParseBarStyle(t *testing.T) {
 	for in, want := range map[string]BarStyle{"soft": BarsSoft, "crisp": BarsCrisp, "": BarsSoft, "bogus": BarsSoft} {
 		if got := parseBarStyle(in); got != want {

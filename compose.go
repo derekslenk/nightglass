@@ -46,6 +46,7 @@ func (b BarStyle) blurDivisor() int {
 // line by line with the color of the picture's adjacent edge, smoothed along
 // the edge, so they fade with the picture (e.g. sky at top, snow at bottom).
 func compose(src image.Image, monW, monH int, style BarStyle) *image.RGBA {
+	src = trimFrame(src)
 	sb := src.Bounds()
 	dst := fitRect(sb.Dx(), sb.Dy(), monW, monH)
 	out := image.NewRGBA(image.Rect(0, 0, monW, monH))
@@ -68,6 +69,57 @@ func compose(src image.Image, monW, monH int, style BarStyle) *image.RGBA {
 		}
 	}
 	return out
+}
+
+// trimFrame crops the uniform near-black frame some APOD pictures carry (a
+// pillarboxed portrait, say), so the bars follow the real edge of the picture
+// instead of copying its black border. A frame line must match the corner
+// pixel to within 2 levels: a padded border decodes pixel-flat, while real
+// dark sky carries noise, so dark content is left alone.
+func trimFrame(src image.Image) image.Image {
+	sub, ok := src.(interface{ SubImage(image.Rectangle) image.Image })
+	if !ok {
+		return src
+	}
+	b := src.Bounds()
+	cr, cg, cb, _ := src.At(b.Min.X, b.Min.Y).RGBA()
+	if cr > 7<<8 || cg > 7<<8 || cb > 7<<8 {
+		return src
+	}
+	close := func(a, b uint32) bool { return max(a, b)-min(a, b) <= 2<<8 }
+	dark := func(x, y int) bool {
+		r, g, bl, _ := src.At(x, y).RGBA()
+		return close(r, cr) && close(g, cg) && close(bl, cb)
+	}
+	darkCol := func(x int) bool {
+		for y := b.Min.Y; y < b.Max.Y; y++ {
+			if !dark(x, y) {
+				return false
+			}
+		}
+		return true
+	}
+	darkRow := func(y int) bool {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			if !dark(x, y) {
+				return false
+			}
+		}
+		return true
+	}
+	for b.Dx() > 1 && darkCol(b.Min.X) {
+		b.Min.X++
+	}
+	for b.Dx() > 1 && darkCol(b.Max.X-1) {
+		b.Max.X--
+	}
+	for b.Dy() > 1 && darkRow(b.Min.Y) {
+		b.Min.Y++
+	}
+	for b.Dy() > 1 && darkRow(b.Max.Y-1) {
+		b.Max.Y--
+	}
+	return sub.SubImage(b)
 }
 
 // edgeProfile returns one color per line along an edge of the placed picture:

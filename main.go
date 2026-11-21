@@ -35,14 +35,10 @@ type app struct {
 }
 
 func main() {
-	// Checked before touching the data folder, so a running copy never has it open
-	// while it is migrated.
 	if !singleInstance() {
 		return
 	}
-	base := os.Getenv("LOCALAPPDATA")
-	folder := &dataFolder{dir: filepath.Join(base, "Nightglass")}
-	migrateErr := folder.migrateFrom(filepath.Join(base, "APOD"))
+	folder := &dataFolder{dir: filepath.Join(os.Getenv("LOCALAPPDATA"), "Nightglass")}
 	if err := os.MkdirAll(folder.dir, 0o755); err != nil {
 		os.Exit(1)
 	}
@@ -50,9 +46,6 @@ func main() {
 		log.SetOutput(f)
 	}
 	log.Printf("nightglass %s starting", version)
-	if migrateErr != nil {
-		log.Printf("move old APOD data folder: %v (starting fresh)", migrateErr)
-	}
 	if err := ensureAutostart(); err != nil {
 		log.Printf("autostart: %v", err)
 	}

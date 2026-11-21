@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"image"
 	"image/png"
 	"io"
@@ -9,48 +10,6 @@ import (
 	"path/filepath"
 	"testing"
 )
-
-func TestMigrateFrom(t *testing.T) {
-	root := t.TempDir()
-	oldDir := filepath.Join(root, "APOD")
-	d := &dataFolder{dir: filepath.Join(root, "Nightglass")}
-
-	// Nothing to migrate: no error, nothing created.
-	if err := d.migrateFrom(oldDir); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(d.dir); err == nil {
-		t.Fatal("created new dir with nothing to migrate")
-	}
-
-	// Old folder moves, settings survive, log is renamed.
-	os.Mkdir(oldDir, 0o755)
-	if err := (&dataFolder{dir: oldDir}).saveSettings(settings{BarStyle: BarsCrisp}); err != nil {
-		t.Fatal(err)
-	}
-	os.WriteFile(filepath.Join(oldDir, "apod.log"), []byte("old"), 0o644)
-	if err := d.migrateFrom(oldDir); err != nil {
-		t.Fatal(err)
-	}
-	if got := d.loadSettings(); got.BarStyle != BarsCrisp {
-		t.Fatalf("migrated style = %q, want crisp", got.BarStyle)
-	}
-	if _, err := os.Stat(d.logPath()); err != nil {
-		t.Fatalf("log not renamed: %v", err)
-	}
-	if _, err := os.Stat(oldDir); err == nil {
-		t.Fatal("old dir still exists")
-	}
-
-	// New folder already exists: an old one reappearing is left alone.
-	os.Mkdir(oldDir, 0o755)
-	if err := d.migrateFrom(oldDir); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(oldDir); err != nil {
-		t.Fatal("touched old dir although new dir existed")
-	}
-}
 
 func TestSettingsRoundTrip(t *testing.T) {
 	d := &dataFolder{dir: t.TempDir()}
@@ -69,7 +28,7 @@ func TestRendersKeepsOldFilesWhenOneFails(t *testing.T) {
 	d := &dataFolder{dir: t.TempDir()}
 	rdir := filepath.Join(d.dir, "rendered")
 	os.MkdirAll(rdir, 0o755)
-	old := filepath.Join(rdir, "2026-11-07_32x32_v5_soft.png") // what the monitor shows now
+	old := filepath.Join(rdir, fmt.Sprintf("2026-11-07_32x32_v%d_soft.png", renderVersion)) // what the monitor shows now
 	os.WriteFile(old, []byte("x"), 0o644)
 	bad := filepath.Join(d.dir, "2026-11-08.png")
 	os.WriteFile(bad, []byte("junk"), 0o644)
@@ -92,7 +51,7 @@ func TestRendersWriteFailureIsAnError(t *testing.T) {
 	png.Encode(f, image.NewRGBA(image.Rect(0, 0, 8, 8)))
 	f.Close()
 	// A directory in the way of the temp file makes the render write fail.
-	os.MkdirAll(filepath.Join(d.dir, "rendered", "2026-11-08_32x32_v5_soft.png.part"), 0o755)
+	os.MkdirAll(filepath.Join(d.dir, "rendered", fmt.Sprintf("2026-11-08_32x32_v%d_soft.png.part", renderVersion)), 0o755)
 	_, err := d.renders(map[string]string{"m": good}, []Monitor{{ID: "m", Width: 32, Height: 32}}, BarsSoft)
 	if err == nil {
 		t.Fatal("a failed render write was reported as success")
