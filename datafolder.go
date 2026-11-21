@@ -19,7 +19,7 @@ import (
 
 const (
 	keepImages    = 7
-	renderVersion = 5 // bump when compose output changes, so cached renders are redone
+	renderVersion = 6 // bump when compose output changes, so cached renders are redone
 	logName       = "nightglass.log"
 )
 

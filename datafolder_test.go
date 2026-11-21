@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"image"
 	"image/png"
 	"io"
@@ -69,7 +70,7 @@ func TestRendersKeepsOldFilesWhenOneFails(t *testing.T) {
 	d := &dataFolder{dir: t.TempDir()}
 	rdir := filepath.Join(d.dir, "rendered")
 	os.MkdirAll(rdir, 0o755)
-	old := filepath.Join(rdir, "2026-11-07_32x32_v5_soft.png") // what the monitor shows now
+	old := filepath.Join(rdir, fmt.Sprintf("2026-11-07_32x32_v%d_soft.png", renderVersion)) // what the monitor shows now
 	os.WriteFile(old, []byte("x"), 0o644)
 	bad := filepath.Join(d.dir, "2026-11-08.png")
 	os.WriteFile(bad, []byte("junk"), 0o644)
@@ -92,7 +93,7 @@ func TestRendersWriteFailureIsAnError(t *testing.T) {
 	png.Encode(f, image.NewRGBA(image.Rect(0, 0, 8, 8)))
 	f.Close()
 	// A directory in the way of the temp file makes the render write fail.
-	os.MkdirAll(filepath.Join(d.dir, "rendered", "2026-11-08_32x32_v5_soft.png.part"), 0o755)
+	os.MkdirAll(filepath.Join(d.dir, "rendered", fmt.Sprintf("2026-11-08_32x32_v%d_soft.png.part", renderVersion)), 0o755)
 	_, err := d.renders(map[string]string{"m": good}, []Monitor{{ID: "m", Width: 32, Height: 32}}, BarsSoft)
 	if err == nil {
 		t.Fatal("a failed render write was reported as success")

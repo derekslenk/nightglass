@@ -72,7 +72,7 @@ Everything lives in `%LOCALAPPDATA%\Nightglass\`:
 1. **Fetch:** reads the official APOD RSS feed at `science.nasa.gov/feed/apod-basic/`. The older `api.nasa.gov` APOD API broke when APOD moved to science.nasa.gov in 2026 (it returns the NASA logo for every day), so it isn't used.
 2. **Full resolution:** the feed's image links point to a preview capped at about 1280 px. The app rewrites `/dynamicimage/assets/…?w=…` to `/content/dam/…` to get the original.
 3. **Monitors:** uses the Windows `IDesktopWallpaper` API to set a different wallpaper per monitor. "Largest" means the most pixels, so a short, wide strip display isn't mistaken for the main screen.
-4. **Render:** each picture is scaled to fit and centered. For every row along the left and right edges, the app takes the median color of a thin strip (so stars don't count), smooths those colors along the edge, and paints the bars row by row. Panoramas wider than the screen get top and bottom bars instead.
+4. **Render:** a pure-black frame baked into the picture (some are pillarboxed) is trimmed off, then the picture is scaled to fit and centered. For every row along the left and right edges, the app takes the median color of a thin strip (so stars don't count), smooths those colors along the edge, and paints the bars row by row. Panoramas wider than the screen get top and bottom bars instead.
 
 ## Troubleshooting
 
