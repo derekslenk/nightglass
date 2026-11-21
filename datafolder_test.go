@@ -11,48 +11,6 @@ import (
 	"testing"
 )
 
-func TestMigrateFrom(t *testing.T) {
-	root := t.TempDir()
-	oldDir := filepath.Join(root, "APOD")
-	d := &dataFolder{dir: filepath.Join(root, "Nightglass")}
-
-	// Nothing to migrate: no error, nothing created.
-	if err := d.migrateFrom(oldDir); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(d.dir); err == nil {
-		t.Fatal("created new dir with nothing to migrate")
-	}
-
-	// Old folder moves, settings survive, log is renamed.
-	os.Mkdir(oldDir, 0o755)
-	if err := (&dataFolder{dir: oldDir}).saveSettings(settings{BarStyle: BarsCrisp}); err != nil {
-		t.Fatal(err)
-	}
-	os.WriteFile(filepath.Join(oldDir, "apod.log"), []byte("old"), 0o644)
-	if err := d.migrateFrom(oldDir); err != nil {
-		t.Fatal(err)
-	}
-	if got := d.loadSettings(); got.BarStyle != BarsCrisp {
-		t.Fatalf("migrated style = %q, want crisp", got.BarStyle)
-	}
-	if _, err := os.Stat(d.logPath()); err != nil {
-		t.Fatalf("log not renamed: %v", err)
-	}
-	if _, err := os.Stat(oldDir); err == nil {
-		t.Fatal("old dir still exists")
-	}
-
-	// New folder already exists: an old one reappearing is left alone.
-	os.Mkdir(oldDir, 0o755)
-	if err := d.migrateFrom(oldDir); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(oldDir); err != nil {
-		t.Fatal("touched old dir although new dir existed")
-	}
-}
-
 func TestSettingsRoundTrip(t *testing.T) {
 	d := &dataFolder{dir: t.TempDir()}
 	if got := d.loadSettings(); got.BarStyle != BarsSoft {
